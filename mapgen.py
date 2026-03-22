@@ -799,9 +799,21 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     font_title = ft
     font_title_km = ftk
     tw = draw.textlength(city_name, font=font_title)
+    # 縁取り付き都市名（日本語）
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((40 + dx, 15 + dy), city_name, fill=(0, 0, 0), font=font_title)
     draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
     if km_name:
         km_y = 15 + (title_size - km_title_size) // 2
+        # 縁取り付き都市名（クメール語）
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                if dx == 0 and dy == 0:
+                    continue
+                draw.text((40 + tw + 20 + dx, km_y + dy), km_name, fill=(0, 0, 0), font=font_title_km)
         draw.text((40 + tw + 20, km_y), km_name, fill=(180, 180, 180), font=font_title_km)
     # 2行目: 英語名
     font_en = get_font(20)
@@ -815,14 +827,24 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     km_name2 = CITY_NAME_MAP.get(city_name, {}).get("km", "")
 
     # 都市ラベル（大きめ）
-    font_city_label = get_font(28, bold=True)
-    font_city_label_km = get_font_km(24)
+    font_city_label = get_font(34, bold=True)
+    font_city_label_km = get_font_km(29)
     lbl = city_name
     if km_name2:
         lbl = city_name + "  "
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((cx + 14 + dx, cy - 14 + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
     draw.text((cx + 14, cy - 14), lbl, fill=COLOR_CITY, font=font_city_label)
     if km_name2:
         lw = draw.textlength(lbl, font=font_city_label)
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                if dx == 0 and dy == 0:
+                    continue
+                draw.text((cx + 14 + lw + dx, cy - 10 + dy), km_name2, fill=COLOR_WHITE, font=font_city_label_km)
         draw.text((cx + 14 + lw, cy - 10), km_name2, fill=(255, 80, 80), font=font_city_label_km)
 
     # 日本ラベル
@@ -1062,7 +1084,7 @@ def _smooth_globe_pos(lon, lat, center_lon, center_lat, globe_diameter, globe_x,
         return (px, py), False
 
 
-def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=None):
+def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=None, scale=100):
     # type: (str, str, int, int) -> str
     """地球儀アニメGIF: 右端→中央へ1/4回転し、停止後にラベル表示"""
     if city_name not in CITY_NAME_MAP:
@@ -1293,9 +1315,19 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
         # ヘッダー（常に表示: 都市名+クメール語+英語名）
         font_title = get_font(48, bold=True)
         font_title_km = get_font_km(36)
-        draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
         tw = draw.textlength(city_name, font=font_title)
+        for dx in range(-2, 3):
+            for dy in range(-2, 3):
+                if dx == 0 and dy == 0:
+                    continue
+                draw.text((40 + dx, 15 + dy), city_name, fill=(0, 0, 0), font=font_title)
+        draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
         if km_name:
+            for dx in range(-2, 3):
+                for dy in range(-2, 3):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((40 + tw + 15 + dx, 22 + dy), km_name, fill=(0, 0, 0), font=font_title_km)
             draw.text((40 + tw + 15, 22), km_name, fill=(180, 180, 180), font=font_title_km)
         font_en = get_font(16)
         draw.text((40, 68), en_name, fill=(160, 180, 200), font=font_en)
@@ -1309,12 +1341,22 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
         # === 停止時のみ: ラベル・距離を表示 ===
         if is_stopped:
             # 都市ラベル
-            font_city_label = get_font(22, bold=True)
-            font_city_label_km = get_font_km(18)
+            font_city_label = get_font(26, bold=True)
+            font_city_label_km = get_font_km(22)
             lbl = city_name + "  "
+            for dx in range(-2, 3):
+                for dy in range(-2, 3):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((cx_p + 12 + dx, cy_p - 12 + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
             draw.text((cx_p + 12, cy_p - 12), lbl, fill=COLOR_CITY, font=font_city_label)
             if km_name:
                 lw = draw.textlength(lbl, font=font_city_label)
+                for dx in range(-2, 3):
+                    for dy in range(-2, 3):
+                        if dx == 0 and dy == 0:
+                            continue
+                        draw.text((cx_p + 12 + lw + dx, cy_p - 9 + dy), km_name, fill=COLOR_WHITE, font=font_city_label_km)
                 draw.text((cx_p + 12 + lw, cy_p - 9), km_name, fill=(255, 80, 80), font=font_city_label_km)
 
             # 日本・カンボジアラベル
@@ -1375,6 +1417,17 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
             # 停止フレーム: 5秒
             frame_durations.append(5000)
 
+    # 縮小
+    if scale < 100:
+        new_w = int(IMG_W * scale / 100)
+        new_h = int(IMG_H * scale / 100)
+        resized = []
+        for f in img_frames:
+            rf = f.resize((new_w, new_h), Image.LANCZOS)
+            resized.append(rf.quantize(colors=256, dither=0))
+        img_frames = resized
+        print("リサイズ: {}x{} ({}%)".format(new_w, new_h, scale))
+
     # GIF保存
     output_path = Path(output_dir) / "map_{}_{}.gif".format(city_name, direction)
     img_frames[0].save(
@@ -1422,7 +1475,7 @@ if __name__ == "__main__":
     parser.add_argument("--force-moon", action="store_true", help="三日月を強制表示")
     parser.add_argument("--force-ufo", action="store_true", help="UFOを強制表示")
     parser.add_argument("--force-city-auto-add", action="store_true", help="未登録都市をNominatimで自動検索して生成")
-    parser.add_argument("--gif", action="store_true", help="回転アニメGIFを生成")
+    parser.add_argument("--gif", action="store_true", help="アニメGIFを生成（デフォルトはPNG静止画）")
     parser.add_argument("--gif-frames", type=int, default=36, help="GIFのフレーム数（デフォルト36）")
     parser.add_argument("--gif-duration", type=int, default=100, help="GIFの1フレームの表示時間ms（デフォルト100）")
     parser.add_argument("--force-direction", choices=[
@@ -1430,6 +1483,7 @@ if __name__ == "__main__":
         "top-right-to-center", "top-left-to-center",
         "bottom-right-to-center", "bottom-left-to-center",
     ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
+    parser.add_argument("--gif-scale", type=int, choices=[80, 50], default=100, help="GIF解像度縮小（80=20%%縮小, 50=50%%縮小）")
     args = parser.parse_args()
 
     city = args.city
@@ -1438,7 +1492,7 @@ if __name__ == "__main__":
         print(city)
 
     if args.gif:
-        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction)
+        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=args.gif_scale)
     else:
         path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add)
 
