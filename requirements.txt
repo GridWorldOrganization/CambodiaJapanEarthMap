@@ -1,0 +1,3 @@
+staticmap
+geopy
+Pillow
