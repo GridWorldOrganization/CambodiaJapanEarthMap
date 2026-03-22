@@ -9,19 +9,44 @@
 pip install -r requirements.txt
 ```
 
-### クメール語フォント（Windows）
+## フォント設定ガイド（Windows）
 
-クメール語を正しく表示するには、以下のいずれかが必要です:
+### 日本語フォント
 
-1. **Khmer UI フォント**（Windows 10/11 に含まれる場合あり）
-2. **手動配置**: `fonts/` ディレクトリに [Noto Sans Khmer](https://fonts.google.com/noto/specimen/Noto+Sans+Khmer) を `NotoSansKhmer-Regular.ttf` として配置
+Windows に「メイリオ」「MS ゴシック」「游ゴシック」のいずれかが入っていれば自動検出されます。通常はそのまま動きます。
 
-### harfbuzz / libraqm（クメール語の結合文字用）
+### クメール語フォント
 
-クメール語の母音記号を正しくレンダリングするために必要です:
+Windows にはクメール語フォントが入っていない場合が多いため、手動で配置が必要です。
 
+**手順:**
+
+1. Google Fonts から **Noto Sans Khmer** をダウンロード
+   - https://fonts.google.com/noto/specimen/Noto+Sans+Khmer
+   - 「Download family」ボタンをクリック
+
+2. ダウンロードした ZIP を解凍し、`NotoSansKhmer-Regular.ttf` を取り出す
+
+3. プロジェクト内に `fonts` フォルダを作成し、そこに配置する:
+   ```
+   CambodiaJapanEarthMap/
+   ├── mapgen.py
+   ├── fonts/
+   │   └── NotoSansKhmer-Regular.ttf   ← ここに置く
+   └── ...
+   ```
+
+4. 再度 `python mapgen.py パリ` を実行
+
+### harfbuzz（クメール語の結合文字用）
+
+クメール語の母音記号が文字からずれて表示される場合は、Pillow に harfbuzz が含まれていない可能性があります。
+
+- **Windows**: Pillow 10.x 以降には harfbuzz が同梱されています。最新版にアップグレードしてください:
+  ```bash
+  pip install --upgrade Pillow
+  ```
 - **macOS**: `brew install libraqm` → `pip install --force-reinstall Pillow`
-- **Windows**: Pillow の最新版（10.x+）には harfbuzz が同梱されています
 
 ### Chatwork アップロード（オプション）
 
