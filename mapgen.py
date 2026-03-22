@@ -636,7 +636,9 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
             draw.ellipse([sx - size // 2, sy - size // 2,
                           sx + size // 2, sy + size // 2], fill=c)
 
-    # === 月 & UFO（重ならないように配置）===
+    # === 月 & UFO（重ならないように配置、ヘッダー領域を避ける）===
+    HEADER_ZONE_BOTTOM = 210  # ヘッダーテキストの下端
+    HEADER_ZONE_RIGHT = 550   # ヘッダーテキストの右端
     show_moon = force_moon or rng.random() < 0.3
     show_ufo = force_ufo or rng.random() < 0.2
     moon_pos = None
@@ -644,7 +646,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     if show_moon:
         for _ in range(20):
             mx = rng.randint(40, IMG_W - 80)
-            my = rng.randint(150, 500)
+            my = rng.randint(HEADER_ZONE_BOTTOM, 500)
             mdx = mx - globe_center_x
             mdy = my - globe_center_y
             if mdx * mdx + mdy * mdy > (GLOBE_SIZE // 2 + 60) ** 2:
@@ -665,7 +667,10 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     if show_ufo:
         for _ in range(40):
             ux = rng.randint(60, IMG_W - 60)
-            uy = rng.randint(150, 850)
+            uy = rng.randint(HEADER_ZONE_BOTTOM, 850)
+            # ヘッダー領域を避ける
+            if uy < HEADER_ZONE_BOTTOM and ux < HEADER_ZONE_RIGHT:
+                continue
             udx = ux - globe_center_x
             udy = uy - globe_center_y
             if udx * udx + udy * udy <= (GLOBE_SIZE // 2 + 50) ** 2:
@@ -777,11 +782,27 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
 
     en_name = city_info.get("en", city_name)
 
-    # 1行目: 日本語  クメール語
-    draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
+    # 1行目: 日本語 + クメール語（長すぎたらフォント縮小）
+    max_title_width = IMG_W - 260  # ロゴ領域を避ける
+    title_size = 72
+    km_title_size = 56
+    while title_size >= 24:
+        ft = get_font(title_size, bold=True)
+        ftk = get_font_km(km_title_size)
+        tw = draw.textlength(city_name, font=ft)
+        kw = draw.textlength(km_name, font=ftk) if km_name else 0
+        total_w = tw + (20 + kw if km_name else 0)
+        if total_w + 40 <= max_title_width:
+            break
+        title_size -= 4
+        km_title_size = int(title_size * 0.78)
+    font_title = ft
+    font_title_km = ftk
     tw = draw.textlength(city_name, font=font_title)
+    draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
     if km_name:
-        draw.text((40 + tw + 20, max(5, 22)), km_name, fill=(180, 180, 180), font=font_title_km)
+        km_y = 15 + (title_size - km_title_size) // 2
+        draw.text((40 + tw + 20, km_y), km_name, fill=(180, 180, 180), font=font_title_km)
     # 2行目: 英語名
     font_en = get_font(20)
     draw.text((40, 92), en_name, fill=(160, 180, 200), font=font_en)
@@ -796,8 +817,18 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
         dist_jp = int(round(haversine_km(city_coord[0], city_coord[1], JAPAN_COORD[0], JAPAN_COORD[1])))
     if dist_kh is None:
         dist_kh = int(round(haversine_km(city_coord[0], city_coord[1], CAMBODIA_COORD[0], CAMBODIA_COORD[1])))
-    draw.text((40, 143), "{} ~ Japan: {:,} km".format(en_name, dist_jp), fill=(140, 160, 180), font=font_dist)
-    draw.text((40, 173), "{} ~ Cambodia: {:,} km".format(en_name, dist_kh), fill=(140, 160, 180), font=font_dist)
+    # 縁取り付きで描画（地球と被っても読めるように）
+    dist_text_jp = "{} ~ Japan: {:,} km".format(en_name, dist_jp)
+    dist_text_kh = "{} ~ Cambodia: {:,} km".format(en_name, dist_kh)
+    outline_color = (0, 0, 0)
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((40 + dx, 143 + dy), dist_text_jp, fill=outline_color, font=font_dist)
+            draw.text((40 + dx, 173 + dy), dist_text_kh, fill=outline_color, font=font_dist)
+    draw.text((40, 143), dist_text_jp, fill=(140, 160, 180), font=font_dist)
+    draw.text((40, 173), dist_text_kh, fill=(140, 160, 180), font=font_dist)
 
     # === ラベル ===
     font_label = get_font(14, bold=True)
