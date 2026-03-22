@@ -809,27 +809,6 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     # 3行目: Japan & Cambodia
     draw.text((40, 118), "Japan & Cambodia", fill=(100, 160, 210), font=font_sub)
 
-    # 距離表示（2行、事前計算値を参照）
-    font_dist = get_font(26)
-    dist_jp = city_info.get("dist_jp")
-    dist_kh = city_info.get("dist_kh")
-    if dist_jp is None:
-        dist_jp = int(round(haversine_km(city_coord[0], city_coord[1], JAPAN_COORD[0], JAPAN_COORD[1])))
-    if dist_kh is None:
-        dist_kh = int(round(haversine_km(city_coord[0], city_coord[1], CAMBODIA_COORD[0], CAMBODIA_COORD[1])))
-    # 縁取り付きで描画（地球と被っても読めるように）
-    dist_text_jp = "{} ~ Japan: {:,} km".format(en_name, dist_jp)
-    dist_text_kh = "{} ~ Cambodia: {:,} km".format(en_name, dist_kh)
-    outline_color = (0, 0, 0)
-    for dx in range(-2, 3):
-        for dy in range(-2, 3):
-            if dx == 0 and dy == 0:
-                continue
-            draw.text((40 + dx, 143 + dy), dist_text_jp, fill=outline_color, font=font_dist)
-            draw.text((40 + dx, 173 + dy), dist_text_kh, fill=outline_color, font=font_dist)
-    draw.text((40, 143), dist_text_jp, fill=(140, 160, 180), font=font_dist)
-    draw.text((40, 173), dist_text_kh, fill=(140, 160, 180), font=font_dist)
-
     # === ラベル ===
     font_label = get_font(14, bold=True)
     font_label_km = get_font_km(12)
@@ -868,6 +847,26 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
         lx = IMG_W - logo_w - 20
         ly = 20
         img.paste(logo, (lx, ly), logo)
+
+    # === 距離表示（最前面に描画）===
+    font_dist = get_font(26)
+    dist_jp = city_info.get("dist_jp")
+    dist_kh = city_info.get("dist_kh")
+    if dist_jp is None:
+        dist_jp = int(round(haversine_km(city_coord[0], city_coord[1], JAPAN_COORD[0], JAPAN_COORD[1])))
+    if dist_kh is None:
+        dist_kh = int(round(haversine_km(city_coord[0], city_coord[1], CAMBODIA_COORD[0], CAMBODIA_COORD[1])))
+    dist_text_jp = "{} ~ Japan: {:,} km".format(en_name, dist_jp)
+    dist_text_kh = "{} ~ Cambodia: {:,} km".format(en_name, dist_kh)
+    outline_color = (0, 0, 0)
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((40 + dx, 143 + dy), dist_text_jp, fill=outline_color, font=font_dist)
+            draw.text((40 + dx, 173 + dy), dist_text_kh, fill=outline_color, font=font_dist)
+    draw.text((40, 143), dist_text_jp, fill=(140, 160, 180), font=font_dist)
+    draw.text((40, 173), dist_text_kh, fill=(140, 160, 180), font=font_dist)
 
     # === 保存 ===
     output_path = Path(output_dir) / "map_{}.png".format(city_name)
