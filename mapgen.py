@@ -35,7 +35,7 @@ CAMBODIA_COORD = (104.9160, 11.5564)
 COLOR_BG = (12, 18, 40)
 COLOR_OCEAN_RING = (40, 80, 130)
 COLOR_TEXT = (230, 230, 230)
-COLOR_CITY = (220, 30, 30)
+COLOR_CITY = (255, 50, 50)
 COLOR_WHITE = (255, 255, 255)
 
 
@@ -823,7 +823,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     draw.text((cx + 14, cy - 14), lbl, fill=COLOR_CITY, font=font_city_label)
     if km_name2:
         lw = draw.textlength(lbl, font=font_city_label)
-        draw.text((cx + 14 + lw, cy - 10), km_name2, fill=(255, 120, 120), font=font_city_label_km)
+        draw.text((cx + 14 + lw, cy - 10), km_name2, fill=(255, 80, 80), font=font_city_label_km)
 
     # 日本ラベル
     draw.text((jx + 14, jy - 8), "日本  ", fill=COLOR_WHITE, font=font_label)
@@ -1016,6 +1016,380 @@ def _find_edge_point(lon1, lat1, lon2, lat2,
     return last_visible
 
 
+def _smooth_globe_pos(lon, lat, center_lon, center_lat, globe_diameter, globe_x, globe_y):
+    """旗の位置を滑らかに計算。裏側ではジャンプせず徐々に浮く"""
+    radius = globe_diameter // 2
+    clat_r = math.radians(center_lat)
+    clon_r = math.radians(center_lon)
+    lat_r = math.radians(lat)
+    lon_r = math.radians(lon)
+    dlon = lon_r - clon_r
+
+    cos_c = math.sin(clat_r) * math.sin(lat_r) + \
+            math.cos(clat_r) * math.cos(lat_r) * math.cos(dlon)
+
+    x = math.cos(lat_r) * math.sin(dlon)
+    y = math.cos(clat_r) * math.sin(lat_r) - \
+        math.sin(clat_r) * math.cos(lat_r) * math.cos(dlon)
+
+    dist = math.sqrt(x * x + y * y)
+    if dist < 0.001:
+        nx, ny = 0.0, -1.0
+    else:
+        nx, ny = x / dist, -y / dist
+
+    if cos_c >= 0.15:
+        # 表面にしっかり乗っている
+        px = globe_x + radius + int(x * radius)
+        py = globe_y + radius - int(y * radius)
+        return (px, py), True
+    elif cos_c >= -0.3:
+        # 縁付近: 表面→浮き上がりへ滑らかに遷移
+        blend = (0.15 - cos_c) / 0.45  # 0→1
+        blend = blend * blend  # ゆっくり始まる
+        edge_px = globe_x + radius + nx * radius
+        edge_py = globe_y + radius + ny * radius
+        out_px = globe_x + radius + nx * (radius + 45)
+        out_py = globe_y + radius + ny * (radius + 45)
+        px = int(edge_px + (out_px - edge_px) * blend)
+        py = int(edge_py + (out_py - edge_py) * blend)
+        return (px, py), True
+    else:
+        # 完全に裏側: 外側に浮いている
+        offset = radius + 45
+        px = globe_x + radius + int(nx * offset)
+        py = globe_y + radius + int(ny * offset)
+        return (px, py), False
+
+
+def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=None):
+    # type: (str, str, int, int) -> str
+    """地球儀アニメGIF: 右端→中央へ1/4回転し、停止後にラベル表示"""
+    if city_name not in CITY_NAME_MAP:
+        print("エラー: 「{}」は登録されていない都市です。".format(city_name))
+        return None
+
+    city_coord = geocode_city(city_name)
+    city_info = CITY_NAME_MAP.get(city_name, {})
+    en_name = city_info.get("en", city_name)
+    km_name = city_info.get("km", "")
+
+    # 方向設定: (lon_offset, lat_offset) 初期値
+    DIR_CONFIG = {
+        "right-to-center":        (-60, 0),
+        "left-to-center":         (60, 0),
+        "top-to-center":          (0, -60),
+        "bottom-to-center":       (0, 60),
+        "top-right-to-center":    (-45, -40),
+        "top-left-to-center":     (45, -40),
+        "bottom-right-to-center": (-45, 40),
+        "bottom-left-to-center":  (45, 40),
+    }
+    if direction is None:
+        direction = random.choice(list(DIR_CONFIG.keys()))
+    dir_lon, dir_lat = DIR_CONFIG[direction]
+    # 緯度オフセットを都市の緯度に応じて対称に調整
+    if dir_lat != 0:
+        max_up = 85 - city_coord[1]    # 上方向の余裕
+        max_down = city_coord[1] + 85   # 下方向の余裕
+        safe_lat = min(abs(dir_lat), max_up, max_down)
+        dir_lat = safe_lat if dir_lat > 0 else -safe_lat
+    move_frames = frames
+    total = frames + 1
+    print("GIF生成: {} (方向={}, 移動{}+停止1={}フレーム)".format(
+        city_name, direction, move_frames, total))
+
+    flat_map = fetch_flat_map(zoom=2, width=2048, height=2048)
+    seed = int(hashlib.md5(city_name.encode()).hexdigest()[:8], 16)
+
+    globe_x = (IMG_W - GLOBE_SIZE) // 2
+    globe_y = (IMG_H - GLOBE_SIZE) // 2
+    globe_center_x = globe_x + GLOBE_SIZE // 2
+    globe_center_y = globe_y + GLOBE_SIZE // 2
+    globe_r_sq = (GLOBE_SIZE // 2 + 10) ** 2
+
+    # ロゴ事前読み込み
+    logo_img = None
+    logo_path = os.path.join(os.path.dirname(__file__), "logo_mirai_lab.png")
+    if os.path.exists(logo_path):
+        logo_img = Image.open(logo_path).convert("RGBA")
+        logo_w = 150
+        logo_h = int(logo_img.height * logo_w / logo_img.width)
+        logo_img = logo_img.resize((logo_w, logo_h), Image.LANCZOS)
+
+    # 距離
+    dist_jp = city_info.get("dist_jp")
+    dist_kh = city_info.get("dist_kh")
+    if dist_jp is None:
+        dist_jp = int(round(haversine_km(city_coord[0], city_coord[1], JAPAN_COORD[0], JAPAN_COORD[1])))
+    if dist_kh is None:
+        dist_kh = int(round(haversine_km(city_coord[0], city_coord[1], CAMBODIA_COORD[0], CAMBODIA_COORD[1])))
+
+    # 月・UFO画像を事前生成
+    rng2 = random.Random(seed + 1)
+    for _ in range(40):
+        moon_base_x = rng2.randint(IMG_W // 2, IMG_W - 80)  # 右側から開始
+        moon_base_y = rng2.randint(150, 850)
+        mdx = moon_base_x - globe_center_x
+        mdy = moon_base_y - globe_center_y
+        if mdx * mdx + mdy * mdy > (GLOBE_SIZE // 2 + 80) ** 2:
+            break
+    moon_r = rng2.randint(15, 25)
+    moon_img_pre = Image.new("RGBA", (moon_r * 3, moon_r * 3), (0, 0, 0, 0))
+    moon_draw = ImageDraw.Draw(moon_img_pre)
+    moon_mc = moon_r * 3 // 2
+    moon_draw.ellipse([moon_mc - moon_r, moon_mc - moon_r, moon_mc + moon_r, moon_mc + moon_r],
+                      fill=(230, 220, 180, 200))
+    offset_m = int(moon_r * 0.6)
+    moon_draw.ellipse([moon_mc - moon_r + offset_m, moon_mc - moon_r - 2,
+                       moon_mc + moon_r + offset_m, moon_mc + moon_r + 2],
+                      fill=(0, 0, 0, 0))
+
+    rng3 = random.Random(seed + 2)
+    for _ in range(40):
+        ufo_base_x = rng3.randint(IMG_W // 2, IMG_W - 60)  # 右側から開始
+        ufo_base_y = rng3.randint(150, 850)
+        udx = ufo_base_x - globe_center_x
+        udy = ufo_base_y - globe_center_y
+        if udx * udx + udy * udy > (GLOBE_SIZE // 2 + 80) ** 2:
+            mdist_u = math.sqrt((ufo_base_x - moon_base_x) ** 2 + (ufo_base_y - moon_base_y) ** 2)
+            if mdist_u > moon_r * 3 + 40:
+                break
+    ufo_size = rng3.randint(32, 48)
+    ufo_pad = 16
+    ufo_total = ufo_size + ufo_pad * 2
+    ufo_img_pre = Image.new("RGBA", (ufo_total, ufo_total), (0, 0, 0, 0))
+    ud = ImageDraw.Draw(ufo_img_pre)
+    ufo_uc = ufo_total // 2
+    ur = ufo_size // 2
+    body_colors = [(180,200,230,210),(200,180,230,210),(180,230,200,210),(230,200,180,210)]
+    bc = body_colors[rng3.randint(0, len(body_colors) - 1)]
+    urh = ur // 2
+    ud.ellipse([ufo_uc - ur, ufo_uc - urh, ufo_uc + ur, ufo_uc + urh], fill=bc)
+    dome_r = int(ur * 0.4)
+    ud.ellipse([ufo_uc - dome_r, ufo_uc - urh - dome_r, ufo_uc + dome_r, ufo_uc - urh + dome_r], fill=(200,230,255,160))
+    ring_h = max(3, int(ur * 0.15))
+    ud.ellipse([ufo_uc - ur - 4, ufo_uc - ring_h, ufo_uc + ur + 4, ufo_uc + ring_h], fill=(150,170,200,180))
+    ufo_angle = rng3.randint(0, 360)
+    ufo_img_pre = ufo_img_pre.rotate(ufo_angle, resample=Image.BICUBIC, expand=False)
+
+    img_frames = []
+    frame_durations = []
+    final_frame = None
+    last_center_lon = city_coord[0]
+    last_center_lat = city_coord[1]
+
+    for i in range(total):
+        is_moving = i < move_frames
+        is_stopped = not is_moving
+
+        if is_moving:
+            t = i / move_frames
+            # イージング計算（方向共通）
+            v1 = 1.0; v3 = 0.5; t1_end = 0.7; t2_end = 0.85
+            e_start = t1_end * v1
+            dur2 = t2_end - t1_end
+            e_mid = e_start + dur2 * (v1 + (v3 - v1) / 2)
+            e_max = e_mid + v3 * (1.0 - t2_end)
+            if t < t1_end:
+                eased = t * v1
+            elif t < t2_end:
+                dt = t - t1_end; t2 = dt / dur2
+                eased = e_start + dur2 * (v1 * t2 + (v3 - v1) * t2 * t2 / 2)
+            else:
+                dt3 = t - t2_end
+                eased = e_mid + v3 * dt3
+            eased = eased / e_max  # 正規化: 0→1.0
+
+            # 方向に応じたオフセット（汎用）
+            remain = 1.0 - eased
+            center_lon = city_coord[0] + dir_lon * remain
+            center_lat = city_coord[1] + dir_lat * remain
+            center_lat = max(-85, min(85, center_lat))
+            last_center_lon = center_lon
+            last_center_lat = center_lat
+        else:
+            center_lon = last_center_lon
+            center_lat = last_center_lat
+
+        while center_lon > 180:
+            center_lon -= 360
+        while center_lon < -180:
+            center_lon += 360
+
+        print("  フレーム {}/{}...".format(i + 1, total))
+        globe = orthographic_project(flat_map, center_lon, center_lat, GLOBE_SIZE)
+
+        img = Image.new("RGB", (IMG_W, IMG_H), COLOR_BG)
+        draw = ImageDraw.Draw(img)
+
+        # 星空
+        rng = random.Random(seed)
+        for _ in range(120):
+            sx = rng.randint(10, IMG_W - 10)
+            sy = rng.randint(140, 890)
+            dx = sx - globe_center_x
+            dy = sy - globe_center_y
+            if dx * dx + dy * dy < globe_r_sq:
+                continue
+            brightness = rng.randint(120, 255)
+            sz = rng.choice([1, 1, 1, 2, 2, 3])
+            clr = (brightness, brightness, brightness)
+            if sz == 1:
+                draw.point((sx, sy), fill=clr)
+            else:
+                draw.ellipse([sx - sz // 2, sy - sz // 2,
+                              sx + sz // 2, sy + sz // 2], fill=clr)
+
+        # 月・UFO（eased に応じて方向別パララックス移動）
+        drift = eased * 120
+        # lon方向 → x移動, lat方向 → y移動（符号反転: 地球回転と同方向に流れる）
+        dx_sign = -1 if dir_lon > 0 else (1 if dir_lon < 0 else 0)
+        dy_sign = -1 if dir_lat > 0 else (1 if dir_lat < 0 else 0)
+        m_dx = int(drift * 0.7 * dx_sign)
+        m_dy = int(drift * 0.7 * dy_sign)
+        u_dx = int(drift * dx_sign)
+        u_dy = int(drift * dy_sign)
+
+        moon_cx = moon_base_x + m_dx
+        moon_cy = moon_base_y + m_dy
+        img.paste(moon_img_pre, (moon_cx - moon_mc, moon_cy - moon_mc), moon_img_pre)
+
+        ufo_cx = ufo_base_x + u_dx
+        ufo_cy = ufo_base_y + u_dy
+        img.paste(ufo_img_pre, (ufo_cx - ufo_uc, ufo_cy - ufo_uc), ufo_img_pre)
+
+        # 地球儀の影
+        for si in range(8, 0, -1):
+            alpha = 30 - si * 3
+            clr = (max(0, COLOR_BG[0] + alpha), max(0, COLOR_BG[1] + alpha), max(0, COLOR_BG[2] + alpha))
+            draw.ellipse([globe_x - si, globe_y - si,
+                          globe_x + GLOBE_SIZE + si, globe_y + GLOBE_SIZE + si], outline=clr, width=2)
+
+        img.paste(globe, (globe_x, globe_y), globe)
+        draw.ellipse([globe_x - 1, globe_y - 1,
+                      globe_x + GLOBE_SIZE + 1, globe_y + GLOBE_SIZE + 1],
+                     outline=COLOR_OCEAN_RING, width=2)
+
+        # マーカー（都市・日本・カンボジア）- 滑らか移動
+        city_gp, city_vis = lonlat_to_globe_pixel(
+            city_coord[0], city_coord[1], center_lon, center_lat, GLOBE_SIZE)
+        cx_p = globe_x + city_gp[0]
+        cy_p = globe_y + city_gp[1]
+        if city_vis:
+            draw.ellipse([cx_p - 8, cy_p - 8, cx_p + 8, cy_p + 8],
+                         fill=COLOR_CITY, outline=COLOR_WHITE, width=2)
+
+        (jx, jy), jp_draw = _smooth_globe_pos(
+            JAPAN_COORD[0], JAPAN_COORD[1], center_lon, center_lat,
+            GLOBE_SIZE, globe_x, globe_y)
+        draw_flag_jp(draw, jx, jy, size=16)
+
+        (kx, ky), kh_draw = _smooth_globe_pos(
+            CAMBODIA_COORD[0], CAMBODIA_COORD[1], center_lon, center_lat,
+            GLOBE_SIZE, globe_x, globe_y)
+        draw_flag_kh(draw, kx, ky, size=16)
+
+        # ヘッダー（常に表示: 都市名+クメール語+英語名）
+        font_title = get_font(48, bold=True)
+        font_title_km = get_font_km(36)
+        draw.text((40, 15), city_name, fill=COLOR_TEXT, font=font_title)
+        tw = draw.textlength(city_name, font=font_title)
+        if km_name:
+            draw.text((40 + tw + 15, 22), km_name, fill=(180, 180, 180), font=font_title_km)
+        font_en = get_font(16)
+        draw.text((40, 68), en_name, fill=(160, 180, 200), font=font_en)
+        font_sub = get_font(14)
+        draw.text((40, 88), "Japan & Cambodia", fill=(100, 160, 210), font=font_sub)
+
+        # ロゴ
+        if logo_img:
+            img.paste(logo_img, (IMG_W - logo_img.width - 15, 15), logo_img)
+
+        # === 停止時のみ: ラベル・距離を表示 ===
+        if is_stopped:
+            # 都市ラベル
+            font_city_label = get_font(22, bold=True)
+            font_city_label_km = get_font_km(18)
+            lbl = city_name + "  "
+            draw.text((cx_p + 12, cy_p - 12), lbl, fill=COLOR_CITY, font=font_city_label)
+            if km_name:
+                lw = draw.textlength(lbl, font=font_city_label)
+                draw.text((cx_p + 12 + lw, cy_p - 9), km_name, fill=(255, 80, 80), font=font_city_label_km)
+
+            # 日本・カンボジアラベル
+            font_label = get_font(12, bold=True)
+            font_label_km = get_font_km(10)
+            draw.text((jx + 12, jy - 6), "日本", fill=COLOR_WHITE, font=font_label)
+            draw.text((kx + 12, ky - 6), "カンボジア", fill=COLOR_WHITE, font=font_label)
+
+            # 破線
+            draw_dashed_line(draw, (cx_p, cy_p), (jx, jy), (200, 200, 200), width=1)
+            draw_dashed_line(draw, (cx_p, cy_p), (kx, ky), (200, 200, 200), width=1)
+
+            # 距離表示（縁取り付き）
+            font_dist = get_font(22)
+            dist_text_jp = "{} ~ Japan: {:,} km".format(en_name, dist_jp)
+            dist_text_kh = "{} ~ Cambodia: {:,} km".format(en_name, dist_kh)
+            for ddx in range(-2, 3):
+                for ddy in range(-2, 3):
+                    if ddx == 0 and ddy == 0:
+                        continue
+                    draw.text((40 + ddx, 110 + ddy), dist_text_jp, fill=(0, 0, 0), font=font_dist)
+                    draw.text((40 + ddx, 135 + ddy), dist_text_kh, fill=(0, 0, 0), font=font_dist)
+            draw.text((40, 110), dist_text_jp, fill=(140, 160, 180), font=font_dist)
+            draw.text((40, 135), dist_text_kh, fill=(140, 160, 180), font=font_dist)
+
+            final_frame = img_p.copy()
+
+        # パレット変換（赤の色化け防止: キーカラーを含む参照パレット使用）
+        # 重要な色を含む参照画像からパレットを生成
+        ref = Image.new("RGB", (20, 1))
+        ref_pixels = ref.load()
+        key_colors = [
+            COLOR_CITY, (188, 0, 45), (224, 0, 37), (3, 46, 161),  # 赤系+青
+            COLOR_WHITE, COLOR_BG, COLOR_OCEAN_RING, COLOR_TEXT,
+            (0, 82, 165), (100, 160, 210), (140, 160, 180),
+            (180, 180, 180), (255, 120, 120), (200, 200, 200),
+            (100, 100, 100), (230, 220, 180), (160, 180, 200),
+            (150, 170, 200), (120, 120, 120), (0, 0, 0),
+        ]
+        for ci, kc in enumerate(key_colors):
+            ref_pixels[ci, 0] = kc
+        # 画像と参照を結合してパレット生成
+        combined = Image.new("RGB", (img.width, img.height + 1))
+        combined.paste(img, (0, 0))
+        combined.paste(ref.resize((img.width, 1)), (0, img.height))
+        img_p = combined.quantize(colors=256, dither=0)
+        # 結合部分を切り取り
+        img_p = img_p.crop((0, 0, img.width, img.height))
+        img_frames.append(img_p)
+
+        # フレームごとのduration計算
+        if is_moving:
+            speed_t = t
+            frame_dur = int(duration * (0.3 + 2.5 * speed_t * speed_t))
+            frame_dur = max(20, min(frame_dur, 200))
+            frame_durations.append(frame_dur)
+        else:
+            # 停止フレーム: 5秒
+            frame_durations.append(5000)
+
+    # GIF保存
+    output_path = Path(output_dir) / "map_{}_{}.gif".format(city_name, direction)
+    img_frames[0].save(
+        str(output_path),
+        save_all=True,
+        append_images=img_frames[1:],
+        duration=frame_durations,
+        loop=0,
+        optimize=False,
+    )
+    fsize = os.path.getsize(str(output_path))
+    print("GIF保存: {} ({:.1f} KB, {:.1f} MB)".format(output_path, fsize / 1024, fsize / 1024 / 1024))
+    return str(output_path)
+
+
 def upload_to_chatwork(file_path, room_id, message=""):
     # type: (str, int, str) -> Optional[str]
     api_token = os.environ.get("CHATWORK_API_TOKEN", "")
@@ -1048,6 +1422,14 @@ if __name__ == "__main__":
     parser.add_argument("--force-moon", action="store_true", help="三日月を強制表示")
     parser.add_argument("--force-ufo", action="store_true", help="UFOを強制表示")
     parser.add_argument("--force-city-auto-add", action="store_true", help="未登録都市をNominatimで自動検索して生成")
+    parser.add_argument("--gif", action="store_true", help="回転アニメGIFを生成")
+    parser.add_argument("--gif-frames", type=int, default=36, help="GIFのフレーム数（デフォルト36）")
+    parser.add_argument("--gif-duration", type=int, default=100, help="GIFの1フレームの表示時間ms（デフォルト100）")
+    parser.add_argument("--force-direction", choices=[
+        "right-to-center", "left-to-center", "top-to-center", "bottom-to-center",
+        "top-right-to-center", "top-left-to-center",
+        "bottom-right-to-center", "bottom-left-to-center",
+    ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
     args = parser.parse_args()
 
     city = args.city
@@ -1055,7 +1437,10 @@ if __name__ == "__main__":
         city = random.choice(list(CITY_NAME_MAP.keys()))
         print(city)
 
-    path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add)
+    if args.gif:
+        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction)
+    else:
+        path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add)
 
     if path and args.upload:
         upload_to_chatwork(path, args.upload, args.message)
