@@ -826,7 +826,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     draw.text((kx + 14 + kw, ky - 6), "កម្ពុជា", fill=(180, 180, 180), font=font_label_km)
 
     # === ロゴ（右上）===
-    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
+    logo_path = os.path.join(os.path.dirname(__file__), "logo_mirai_lab.png")
     if os.path.exists(logo_path):
         logo = Image.open(logo_path).convert("RGBA")
         # 幅200pxにリサイズ（アスペクト比維持）
