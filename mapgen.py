@@ -1477,7 +1477,7 @@ if __name__ == "__main__":
     parser.add_argument("--force-city-auto-add", action="store_true", help="未登録都市をNominatimで自動検索して生成")
     parser.add_argument("--gif", action="store_true", help="アニメGIFを生成（デフォルトはPNG静止画）")
     parser.add_argument("--gif-frames", type=int, default=36, help="GIFのフレーム数（デフォルト36）")
-    parser.add_argument("--gif-duration", type=int, default=100, help="GIFの1フレームの表示時間ms（デフォルト100）")
+    parser.add_argument("--gif-duration", type=int, default=50, help="GIFの1フレームの表示時間ms（デフォルト50）")
     parser.add_argument("--force-direction", choices=[
         "right-to-center", "left-to-center", "top-to-center", "bottom-to-center",
         "top-right-to-center", "top-left-to-center",
