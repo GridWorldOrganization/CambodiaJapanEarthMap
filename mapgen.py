@@ -1476,7 +1476,8 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="地球儀風地図画像を生成")
     parser.add_argument("city", nargs="?", default=None, help="都市名（日本語 or 英語）。省略時はランダム選択")
-    parser.add_argument("--output", "-o", default=".", help="出力先ディレクトリ")
+    default_output = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+    parser.add_argument("--output", "-o", default=default_output, help="出力先ディレクトリ")
     parser.add_argument("--upload", "-u", type=int, help="ChatworkルームIDを指定してアップロード")
     parser.add_argument("--message", "-m", default="", help="アップロード時のメッセージ")
     parser.add_argument("--force-moon", action="store_true", help="三日月を強制表示")
@@ -1492,6 +1493,8 @@ if __name__ == "__main__":
     ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
     parser.add_argument("--gif-scale", type=int, choices=[80, 50], default=100, help="GIF解像度縮小（80=20%%縮小, 50=50%%縮小）")
     args = parser.parse_args()
+
+    os.makedirs(args.output, exist_ok=True)
 
     city = args.city
     if city is None:
