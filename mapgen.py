@@ -1084,7 +1084,7 @@ def _smooth_globe_pos(lon, lat, center_lon, center_lat, globe_diameter, globe_x,
         return (px, py), False
 
 
-def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=None, scale=100):
+def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=None, scale=100, force_moon=False, force_ufo=False):
     # type: (str, str, int, int) -> str
     """地球儀アニメGIF: 右端→中央へ1/4回転し、停止後にラベル表示"""
     if city_name not in CITY_NAME_MAP:
@@ -1146,6 +1146,11 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
         dist_jp = int(round(haversine_km(city_coord[0], city_coord[1], JAPAN_COORD[0], JAPAN_COORD[1])))
     if dist_kh is None:
         dist_kh = int(round(haversine_km(city_coord[0], city_coord[1], CAMBODIA_COORD[0], CAMBODIA_COORD[1])))
+
+    # 月・UFO表示判定（PNGと同じランダム確率）
+    rng_show = random.Random(seed + 99)
+    show_moon = force_moon or rng_show.random() < 0.3
+    show_ufo = force_ufo or rng_show.random() < 0.2
 
     # 月・UFO画像を事前生成
     rng2 = random.Random(seed + 1)
@@ -1273,13 +1278,15 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
         u_dx = int(drift * dx_sign)
         u_dy = int(drift * dy_sign)
 
-        moon_cx = moon_base_x + m_dx
-        moon_cy = moon_base_y + m_dy
-        img.paste(moon_img_pre, (moon_cx - moon_mc, moon_cy - moon_mc), moon_img_pre)
+        if show_moon:
+            moon_cx = moon_base_x + m_dx
+            moon_cy = moon_base_y + m_dy
+            img.paste(moon_img_pre, (moon_cx - moon_mc, moon_cy - moon_mc), moon_img_pre)
 
-        ufo_cx = ufo_base_x + u_dx
-        ufo_cy = ufo_base_y + u_dy
-        img.paste(ufo_img_pre, (ufo_cx - ufo_uc, ufo_cy - ufo_uc), ufo_img_pre)
+        if show_ufo:
+            ufo_cx = ufo_base_x + u_dx
+            ufo_cy = ufo_base_y + u_dy
+            img.paste(ufo_img_pre, (ufo_cx - ufo_uc, ufo_cy - ufo_uc), ufo_img_pre)
 
         # 地球儀の影
         for si in range(8, 0, -1):
@@ -1492,7 +1499,7 @@ if __name__ == "__main__":
         print(city)
 
     if args.gif:
-        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=args.gif_scale)
+        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=args.gif_scale, force_moon=args.force_moon, force_ufo=args.force_ufo)
     else:
         path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add)
 
