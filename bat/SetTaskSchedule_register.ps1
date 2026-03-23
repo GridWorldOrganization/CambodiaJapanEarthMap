@@ -1,4 +1,4 @@
-$envFile = Join-Path $PSScriptRoot "SetTaskSchedule_config.env"
+﻿$envFile = Join-Path $PSScriptRoot "SetTaskSchedule_config.env"
 $config  = @{}
 Get-Content $envFile -Encoding Default |
     Where-Object { $_ -notmatch '^\s*#' -and $_ -match '=' } |
@@ -23,7 +23,7 @@ if ($intervalMin -gt 0) {
     $trigger  = New-ScheduledTaskTrigger -Once -At (Get-Date) `
                     -RepetitionInterval (New-TimeSpan -Minutes $intervalMin)
     $settings = New-ScheduledTaskSettingsSet `
-                    -ExecutionTimeLimit (New-TimeSpan -Minutes ($intervalMin - 1)) `
+                    -ExecutionTimeLimit (New-TimeSpan -Hours 2) `
                     -MultipleInstances IgnoreNew
     Register-ScheduledTask -TaskName $taskName -Action $action `
         -Trigger $trigger -Settings $settings -Force | Out-Null

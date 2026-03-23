@@ -9,18 +9,24 @@
 
 | ファイル | 役割 |
 |---|---|
-| `SetTaskSchedule_config.env` | 設定ファイル（間隔・時刻・手順書ファイル名） |
+| `SetTaskSchedule_config.env` | 設定ファイル（タスク名・実行パス・手順書・スケジュール） |
 | `SetTaskSchedule_register.bat` | タスクスケジューラへの登録（ダブルクリックで実行） |
 | `SetTaskSchedule_register.ps1` | 登録処理の本体（PowerShell）。register.bat から呼ばれる |
 | `SetTaskSchedule_runner.bat` | タスクスケジューラから実際に起動されるバッチ |
 | `SetTaskSchedule_unregister.bat` | タスクスケジューラからの登録削除 |
 | `SetTaskSchedule_watch.bat` | ログをリアルタイム監視するウィンドウを開く |
+| `SetTaskSchedule_config.env.example` | 設定ファイルのサンプル（各項目の説明付き） |
+| `maintenance/` | 修正・メンテナンス用ファイル一式 |
+| `maintenance/SetTaskSchedule_runner_gen.py` | runner.bat を Shift-JIS で生成する Python スクリプト。runner.bat を編集したい場合はこちらを修正して `python maintenance/SetTaskSchedule_runner_gen.py` を実行する |
 
 ---
 
 ## 設定ファイル（.env）
 
 ```ini
+# タスクスケジューラのタスク名
+TASK_NAME=ClaudeMapApp
+
 # 何分に1回起動するか（分間隔モード）
 # 0 にすると SCHEDULE_TIMES の時刻指定モードになる
 INTERVAL_MINUTES=10
@@ -29,16 +35,33 @@ INTERVAL_MINUTES=10
 # 例: 09:00,13:00,18:00
 SCHEDULE_TIMES=09:00,18:00
 
+# 実行モード（dev=開発, prod=本番）
+MODE=dev
+
 # 実行する手順書ファイル名
-PROCEDURE_FILE=20260323_1711_AI手順書_地図投稿.md
+PROCEDURE_FILE=
+
+# claude.cmd が入っているフォルダパス（PATH が通っていない環境向け）
+# 空欄にすると PATH をそのまま使う
+# 例: C:\Users\yourname\AppData\Roaming\npm
+CLAUDE_CODE_EXEC_DIR=
 ```
 
-### モードの切り替え
+### スケジュールモードの切り替え
 
 | 設定 | 動作 |
 |---|---|
 | `INTERVAL_MINUTES=10` | 10分ごとに繰り返し起動 |
 | `INTERVAL_MINUTES=0` | `SCHEDULE_TIMES` に指定した時刻に毎日起動 |
+
+### CLAUDE_CODE_EXEC_DIR（claude -p 実行ディレクトリ）
+
+`claude -p` を実行するカレントディレクトリを指定します。空欄の場合は bat フォルダの2階層上を自動で使用します。
+
+| 設定 | 動作 |
+|---|---|
+| `CLAUDE_CODE_EXEC_DIR=` （空欄） | bat フォルダの2階層上を自動で使用 |
+| `CLAUDE_CODE_EXEC_DIR=C:\path\to\project` | 指定したディレクトリで claude を実行 |
 
 > ⚠️ `SetTaskSchedule_config.env` を変更したあとは、**一度削除して再登録**しないと反映されません。
 
@@ -94,6 +117,30 @@ PROCEDURE_FILE=20260323_1711_AI手順書_地図投稿.md
 
 > 実行中は Claude の出力がリアルタイムでログに書かれます。
 > `SetTaskSchedule_watch.bat` を開いておくと内容を確認できます。
+
+---
+
+## 文字コード設定
+
+各ファイルの文字コードは以下の通りです。**編集時は必ずこの設定に合わせてください。**
+
+| ファイル | 文字コード | 理由 |
+|---|---|---|
+| `SetTaskSchedule_runner.bat` | **Shift-JIS (ANSI)** | cmd.exe はファイルを起動時に Shift-JIS として解析するため。UTF-8 にすると日本語コマンドが文字化けして実行エラーになる |
+| `SetTaskSchedule_register.bat` | **Shift-JIS (ANSI)** | 同上 |
+| `SetTaskSchedule_unregister.bat` | **Shift-JIS (ANSI)** | 同上 |
+| `SetTaskSchedule_watch.bat` | **Shift-JIS (ANSI)** | 同上 |
+| `SetTaskSchedule_register.ps1` | **UTF-8 BOM付き** | PowerShell 5 は BOM なし UTF-8 を ANSI と誤認するため、BOM 付きが必要 |
+| `SetTaskSchedule_config.env` | **Shift-JIS (ANSI)** | runner.bat の `for /f` ループで読み込むため、bat と同じ文字コードが必要 |
+| `SetTaskSchedule_config.env.example` | **Shift-JIS (ANSI)** | 同上 |
+| `maintenance/SetTaskSchedule_runner_gen.py` | **UTF-8** | Python スクリプト。Shift-JIS の runner.bat を生成するために使用 |
+| `SetTaskSchedule_README.md` | **UTF-8** | 閲覧専用のため制限なし |
+
+### ⚠️ 注意
+
+- `.bat` ファイルを **UTF-8 で保存すると動作しません**（タスクスケジューラ実行時にコマンドが認識されないエラーが発生します）
+- `chcp 65001`（UTF-8切り替えコマンド）を先頭に追加しても、**ファイル自体の解析には効かない**ため解決しません
+- テキストエディタで編集する場合は、保存時の文字コードを必ず確認してください
 
 ---
 
