@@ -37,7 +37,9 @@ if ($intervalMin -gt 0) {
         -Trigger $triggers -Settings $settings -Force | Out-Null
 }
 
+Disable-ScheduledTask -TaskName $taskName | Out-Null
+
 Write-Host ""
-Write-Host "登録完了。確認:"
+Write-Host "登録完了（無効状態）。確認:"
 Get-ScheduledTask -TaskName $taskName | Select-Object TaskName, State, TaskPath
 Read-Host "`nEnterキーで閉じる"
