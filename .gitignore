@@ -5,3 +5,4 @@ __pycache__/
 fonts/*
 !fonts/NotoSansKhmer-Regular.ttf
 cache/
+bat/SetTaskSchedule_config.env
