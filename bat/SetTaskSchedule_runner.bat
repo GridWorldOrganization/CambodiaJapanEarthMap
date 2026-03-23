@@ -10,6 +10,13 @@ for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%ENVFILE%") do (
     if not "%%a"=="" set "%%a=%%b"
 )
 
+if "%PROCEDURE_FILE%"=="" (
+    echo [ClaudeMapApp] エラー: PROCEDURE_FILE が未指定です。SetTaskSchedule_config.env を確認してください。
+    echo [ClaudeMapApp] エラー: PROCEDURE_FILE が未指定です。SetTaskSchedule_config.env を確認してください。 > "%LOGFILE%"
+    pause
+    exit /b 1
+)
+
 echo [ClaudeMapApp] 開始: %date% %time%
 echo [ClaudeMapApp] 開始: %date% %time% > "%LOGFILE%"
 echo [ClaudeMapApp] 手順書: %PROCEDURE_FILE%
