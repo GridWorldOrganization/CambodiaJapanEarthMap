@@ -2,5 +2,6 @@ map_*.png
 __pycache__/
 *.pyc
 .env
-fonts/
+fonts/*
+!fonts/NotoSansKhmer-Regular.ttf
 cache/

@@ -17,26 +17,17 @@ Windows に「メイリオ」「MS ゴシック」「游ゴシック」のいず
 
 ### クメール語フォント
 
-Windows にはクメール語フォントが入っていない場合が多いため、手動で配置が必要です。
+**Noto Sans Khmer** がリポジトリの `fonts/` に同梱済みです。追加作業は不要です。
 
-**手順:**
+```
+mapapp/
+├── mapgen.py
+├── fonts/
+│   └── NotoSansKhmer-Regular.ttf   ← 同梱済み
+└── ...
+```
 
-1. Google Fonts から **Noto Sans Khmer** をダウンロード
-   - https://fonts.google.com/noto/specimen/Noto+Sans+Khmer
-   - 「Download family」ボタンをクリック
-
-2. ダウンロードした ZIP を解凍し、`NotoSansKhmer-Regular.ttf` を取り出す
-
-3. プロジェクト内に `fonts` フォルダを作成し、そこに配置する:
-   ```
-   CambodiaJapanEarthMap/
-   ├── mapgen.py
-   ├── fonts/
-   │   └── NotoSansKhmer-Regular.ttf   ← ここに置く
-   └── ...
-   ```
-
-4. 再度 `python mapgen.py パリ` を実行
+> **注意:** macOS では `/System/Library/Fonts/Supplemental/Khmer MN.ttc` が優先使用されます。Windows では同梱フォントが自動的に使われます。
 
 ### harfbuzz（クメール語の結合文字用）
 
