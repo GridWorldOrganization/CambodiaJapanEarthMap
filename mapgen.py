@@ -583,7 +583,7 @@ def draw_flag_kh(draw, cx, cy, size=20):
     draw.rectangle([x0, y0, x0 + fw, y0 + fh], outline=(100, 100, 100))
 
 
-def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, force_city_auto_add=False):
+def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, force_city_auto_add=False, scale=100):
     # type: (str, str) -> str
 
     if not force_city_auto_add and city_name not in CITY_NAME_MAP:
@@ -911,9 +911,14 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     draw.text((40, 173), dist_text_kh, fill=(140, 160, 180), font=font_dist)
 
     # === 保存 ===
+    if scale < 100:
+        new_w = int(img.width * scale / 100)
+        new_h = int(img.height * scale / 100)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+        print("リサイズ: {}x{} ({}%)".format(new_w, new_h, scale))
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = Path(output_dir) / "map_{}_{}.png".format(city_name, timestamp)
+    output_path = Path(output_dir) / "map_{}_{}_{}.png".format(city_name, timestamp, scale)
     img.save(str(output_path), optimize=True)
     fsize = os.path.getsize(str(output_path))
     print("保存: {} ({:.1f} KB)".format(output_path, fsize / 1024))
@@ -1543,6 +1548,7 @@ if __name__ == "__main__":
         "bottom-right-to-center", "bottom-left-to-center",
     ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
     parser.add_argument("--gif-scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=60, help="GIF解像度縮小（50～90）")
+    parser.add_argument("--png-scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=100, help="PNG解像度縮小（デフォルト100）")
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -1555,7 +1561,7 @@ if __name__ == "__main__":
     if args.gif:
         path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=args.gif_scale, force_moon=args.force_moon, force_ufo=args.force_ufo)
     else:
-        path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add)
+        path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add, scale=args.png_scale)
 
     if path and args.upload:
         upload_to_chatwork(path, args.upload, args.message)

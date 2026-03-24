@@ -96,7 +96,12 @@ python mapgen.py ウラジオストク --gif --gif-scale 60 --force-moon --force
 
 ### PNG静止画の出力ファイル名
 
-`map_{都市名}_{YYYYMMDD_HHMMSS}.png`
+`map_{都市名}_{YYYYMMDD_HHMMSS}_{scale}.png`
+
+```bash
+# スケール指定（デフォルト: 100）
+python mapgen.py 東京 --png-scale 60
+```
 
 #### GIF スケール別ファイルサイズ目安
 
@@ -134,6 +139,7 @@ python mapgen.py ロンドン --upload 426936385 -m "カスタムメッセージ
 | `--force-ufo` | UFOを強制表示（無指定時は約20%の確率でランダム表示） |
 | `--force-city-auto-add` | 未登録都市をNominatimで自動検索して生成（要ネット接続） |
 | `--gif` | アニメGIFを生成（デフォルトはPNG静止画） |
+| `--png-scale` | PNG解像度: 50/60/70/80/90/100（デフォルト: 100） |
 | `--gif-scale` | GIF解像度: 50/60/70/80/90/100（デフォルト: 60） |
 | `--gif-frames` | GIFのフレーム数（デフォルト: 36） |
 | `--gif-duration` | GIFの1フレームの表示時間ms（デフォルト: 50） |
