@@ -94,6 +94,10 @@ python mapgen.py ウラジオストク --gif --gif-scale 60 --force-moon --force
 
 出力ファイル名: `map_{都市名}_{YYYYMMDD_HHMMSS}_{scale}.gif`
 
+### PNG静止画の出力ファイル名
+
+`map_{都市名}_{YYYYMMDD_HHMMSS}.png`
+
 #### GIF スケール別ファイルサイズ目安
 
 | スケール | 解像度 | ファイルサイズ |

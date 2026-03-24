@@ -911,7 +911,9 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     draw.text((40, 173), dist_text_kh, fill=(140, 160, 180), font=font_dist)
 
     # === 保存 ===
-    output_path = Path(output_dir) / "map_{}.png".format(city_name)
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = Path(output_dir) / "map_{}_{}.png".format(city_name, timestamp)
     img.save(str(output_path), optimize=True)
     fsize = os.path.getsize(str(output_path))
     print("保存: {} ({:.1f} KB)".format(output_path, fsize / 1024))
