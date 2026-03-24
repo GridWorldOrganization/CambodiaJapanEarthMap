@@ -783,7 +783,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     en_name = city_info.get("en", city_name)
 
     # 1行目: 日本語 + クメール語（長すぎたらフォント縮小）
-    max_title_width = IMG_W - 260  # ロゴ領域を避ける
+    max_title_width = IMG_W - 360  # ロゴ領域（300px+余白）を避ける
     title_size = 72
     km_title_size = 56
     while title_size >= 24:
@@ -856,26 +856,33 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
             draw.text((kx + 14 + kw + dx, ky - 6 + dy), "កម្ពុជា", fill=(0, 0, 0), font=font_label_km)
     draw.text((kx + 14 + kw, ky - 6), "កម្ពុជា", fill=(180, 180, 180), font=font_label_km)
 
-    # 都市ラベル（後に描画=上層）
-    font_city_label = get_font(34, bold=True)
-    font_city_label_km = get_font_km(29)
+    # 都市ラベル（後に描画=上層、ピン上にセンタリング）
+    city_label_size = 34
+    city_label_km_size = 29
+    font_city_label = get_font(city_label_size, bold=True)
+    font_city_label_km = get_font_km(city_label_km_size)
     lbl = city_name
-    if km_name2:
-        lbl = city_name + "  "
+    lbl_w = draw.textlength(lbl, font=font_city_label)
+    km_w2 = draw.textlength(km_name2, font=font_city_label_km) if km_name2 else 0
+    gap = 10 if km_name2 else 0
+    total_label_w = lbl_w + gap + km_w2
+    label_x = cx - total_label_w / 2
+    label_y = cy - city_label_size - 16
     for dx in range(-2, 3):
         for dy in range(-2, 3):
             if dx == 0 and dy == 0:
                 continue
-            draw.text((cx + 14 + dx, cy - 14 + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
-    draw.text((cx + 14, cy - 14), lbl, fill=COLOR_CITY, font=font_city_label)
+            draw.text((label_x + dx, label_y + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
+    draw.text((label_x, label_y), lbl, fill=COLOR_CITY, font=font_city_label)
     if km_name2:
-        lw = draw.textlength(lbl, font=font_city_label)
+        km_x2 = label_x + lbl_w + gap
+        km_y2 = label_y + (city_label_size - city_label_km_size) // 2
         for dx in range(-2, 3):
             for dy in range(-2, 3):
                 if dx == 0 and dy == 0:
                     continue
-                draw.text((cx + 14 + lw + dx, cy - 10 + dy), km_name2, fill=COLOR_WHITE, font=font_city_label_km)
-        draw.text((cx + 14 + lw, cy - 10), km_name2, fill=(255, 80, 80), font=font_city_label_km)
+                draw.text((km_x2 + dx, km_y2 + dy), km_name2, fill=COLOR_WHITE, font=font_city_label_km)
+        draw.text((km_x2, km_y2), km_name2, fill=(255, 80, 80), font=font_city_label_km)
 
     # === ロゴ（右上）===
     logo_path = os.path.join(os.path.dirname(__file__), "logo_mirai_lab.png")
