@@ -25,7 +25,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 # === 定数 ===
 GLOBE_SIZE = 770         # 地球儀の直径
 IMG_W = 960
-IMG_H = 990
+IMG_H = 965
 
 # 固定座標 (lon, lat)
 JAPAN_COORD = (139.6917, 35.6895)
@@ -760,7 +760,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     jy = globe_y + jp_gp[1]
     if jp_visible:
         draw.ellipse([jx - 6, jy - 6, jx + 6, jy + 6], fill=(0, 82, 165), outline=COLOR_WHITE, width=2)
-    draw_flag_jp(draw, jx, jy)
+    draw_flag_jp(draw, jx, jy, size=40)
     draw_dashed_line(draw, (cx, cy), (jx, jy), (200, 200, 200), width=1)
 
     # カンボジア
@@ -768,7 +768,7 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     ky = globe_y + kh_gp[1]
     if kh_visible:
         draw.ellipse([kx - 6, ky - 6, kx + 6, ky + 6], fill=(0, 82, 165), outline=COLOR_WHITE, width=2)
-    draw_flag_kh(draw, kx, ky)
+    draw_flag_kh(draw, kx, ky, size=40)
     draw_dashed_line(draw, (cx, cy), (kx, ky), (200, 200, 200), width=1)
 
 
@@ -822,11 +822,41 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
     draw.text((40, 118), "Japan & Cambodia", fill=(100, 160, 210), font=font_sub)
 
     # === ラベル ===
-    font_label = get_font(14, bold=True)
-    font_label_km = get_font_km(12)
+    font_label = get_font(17, bold=True)
+    font_label_km = get_font_km(14)
     km_name2 = CITY_NAME_MAP.get(city_name, {}).get("km", "")
 
-    # 都市ラベル（大きめ）
+    # 日本ラベル（先に描画=下層、縁取り付き）
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((jx + 14 + dx, jy - 8 + dy), "日本  ", fill=(0, 0, 0), font=font_label)
+    draw.text((jx + 14, jy - 8), "日本  ", fill=COLOR_WHITE, font=font_label)
+    jw = draw.textlength("日本  ", font=font_label)
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((jx + 14 + jw + dx, jy - 6 + dy), "ជប៉ុន", fill=(0, 0, 0), font=font_label_km)
+    draw.text((jx + 14 + jw, jy - 6), "ជប៉ុន", fill=(180, 180, 180), font=font_label_km)
+
+    # カンボジアラベル（先に描画=下層、縁取り付き）
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((kx + 14 + dx, ky - 8 + dy), "カンボジア  ", fill=(0, 0, 0), font=font_label)
+    draw.text((kx + 14, ky - 8), "カンボジア  ", fill=COLOR_WHITE, font=font_label)
+    kw = draw.textlength("カンボジア  ", font=font_label)
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            if dx == 0 and dy == 0:
+                continue
+            draw.text((kx + 14 + kw + dx, ky - 6 + dy), "កម្ពុជា", fill=(0, 0, 0), font=font_label_km)
+    draw.text((kx + 14 + kw, ky - 6), "កម្ពុជា", fill=(180, 180, 180), font=font_label_km)
+
+    # 都市ラベル（後に描画=上層）
     font_city_label = get_font(34, bold=True)
     font_city_label_km = get_font_km(29)
     lbl = city_name
@@ -847,22 +877,12 @@ def generate_map(city_name, output_dir=".", force_moon=False, force_ufo=False, f
                 draw.text((cx + 14 + lw + dx, cy - 10 + dy), km_name2, fill=COLOR_WHITE, font=font_city_label_km)
         draw.text((cx + 14 + lw, cy - 10), km_name2, fill=(255, 80, 80), font=font_city_label_km)
 
-    # 日本ラベル
-    draw.text((jx + 14, jy - 8), "日本  ", fill=COLOR_WHITE, font=font_label)
-    jw = draw.textlength("日本  ", font=font_label)
-    draw.text((jx + 14 + jw, jy - 6), "ជប៉ុន", fill=(180, 180, 180), font=font_label_km)
-
-    # カンボジアラベル
-    draw.text((kx + 14, ky - 8), "カンボジア  ", fill=COLOR_WHITE, font=font_label)
-    kw = draw.textlength("カンボジア  ", font=font_label)
-    draw.text((kx + 14 + kw, ky - 6), "កម្ពុជា", fill=(180, 180, 180), font=font_label_km)
-
     # === ロゴ（右上）===
     logo_path = os.path.join(os.path.dirname(__file__), "logo_mirai_lab.png")
     if os.path.exists(logo_path):
         logo = Image.open(logo_path).convert("RGBA")
         # 幅200pxにリサイズ（アスペクト比維持）
-        logo_w = 200
+        logo_w = 300
         logo_h = int(logo.height * logo_w / logo.width)
         logo = logo.resize((logo_w, logo_h), Image.LANCZOS)
         # 右上に配置（余白20px）
@@ -1135,7 +1155,7 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
     logo_path = os.path.join(os.path.dirname(__file__), "logo_mirai_lab.png")
     if os.path.exists(logo_path):
         logo_img = Image.open(logo_path).convert("RGBA")
-        logo_w = 150
+        logo_w = 225
         logo_h = int(logo_img.height * logo_w / logo_img.width)
         logo_img = logo_img.resize((logo_w, logo_h), Image.LANCZOS)
 
@@ -1201,6 +1221,7 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
     ufo_img_pre = ufo_img_pre.rotate(ufo_angle, resample=Image.BICUBIC, expand=False)
 
     img_frames = []
+    img_frames_rgb = []
     frame_durations = []
     final_frame = None
     last_center_lon = city_coord[0]
@@ -1312,12 +1333,12 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
         (jx, jy), jp_draw = _smooth_globe_pos(
             JAPAN_COORD[0], JAPAN_COORD[1], center_lon, center_lat,
             GLOBE_SIZE, globe_x, globe_y)
-        draw_flag_jp(draw, jx, jy, size=16)
+        draw_flag_jp(draw, jx, jy, size=32)
 
         (kx, ky), kh_draw = _smooth_globe_pos(
             CAMBODIA_COORD[0], CAMBODIA_COORD[1], center_lon, center_lat,
             GLOBE_SIZE, globe_x, globe_y)
-        draw_flag_kh(draw, kx, ky, size=16)
+        draw_flag_kh(draw, kx, ky, size=32)
 
         # ヘッダー（常に表示: 都市名+クメール語+英語名）
         font_title = get_font(48, bold=True)
@@ -1347,30 +1368,45 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
 
         # === 停止時のみ: ラベル・距離を表示 ===
         if is_stopped:
-            # 都市ラベル
-            font_city_label = get_font(26, bold=True)
-            font_city_label_km = get_font_km(22)
-            lbl = city_name + "  "
+            # 日本・カンボジアラベル（先に描画=下層、縁取り付き）
+            font_label = get_font(14, bold=True)
+            font_label_km = get_font_km(12)
             for dx in range(-2, 3):
                 for dy in range(-2, 3):
                     if dx == 0 and dy == 0:
                         continue
-                    draw.text((cx_p + 12 + dx, cy_p - 12 + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
-            draw.text((cx_p + 12, cy_p - 12), lbl, fill=COLOR_CITY, font=font_city_label)
+                    draw.text((jx + 12 + dx, jy - 6 + dy), "日本", fill=(0, 0, 0), font=font_label)
+                    draw.text((kx + 12 + dx, ky - 6 + dy), "カンボジア", fill=(0, 0, 0), font=font_label)
+            draw.text((jx + 12, jy - 6), "日本", fill=COLOR_WHITE, font=font_label)
+            draw.text((kx + 12, ky - 6), "カンボジア", fill=COLOR_WHITE, font=font_label)
+
+            # 都市ラベル（後に描画=上層、scaleが小さいほどフォント大、ピン上にセンタリング）
+            city_label_size = int(26 * (100 / max(scale, 50)))
+            city_label_km_size = int(city_label_size * 0.85)
+            font_city_label = get_font(city_label_size, bold=True)
+            font_city_label_km = get_font_km(city_label_km_size)
+            lbl = city_name
+            lbl_w = draw.textlength(lbl, font=font_city_label)
+            km_w = draw.textlength(km_name, font=font_city_label_km) if km_name else 0
+            gap = 10 if km_name else 0
+            total_w = lbl_w + gap + km_w
+            label_x = cx_p - total_w / 2
+            label_y = cy_p - city_label_size - 16
+            for dx in range(-2, 3):
+                for dy in range(-2, 3):
+                    if dx == 0 and dy == 0:
+                        continue
+                    draw.text((label_x + dx, label_y + dy), lbl, fill=COLOR_WHITE, font=font_city_label)
+            draw.text((label_x, label_y), lbl, fill=COLOR_CITY, font=font_city_label)
             if km_name:
-                lw = draw.textlength(lbl, font=font_city_label)
+                km_x = label_x + lbl_w + gap
+                km_y = label_y + (city_label_size - city_label_km_size) // 2
                 for dx in range(-2, 3):
                     for dy in range(-2, 3):
                         if dx == 0 and dy == 0:
                             continue
-                        draw.text((cx_p + 12 + lw + dx, cy_p - 9 + dy), km_name, fill=COLOR_WHITE, font=font_city_label_km)
-                draw.text((cx_p + 12 + lw, cy_p - 9), km_name, fill=(255, 80, 80), font=font_city_label_km)
-
-            # 日本・カンボジアラベル
-            font_label = get_font(12, bold=True)
-            font_label_km = get_font_km(10)
-            draw.text((jx + 12, jy - 6), "日本", fill=COLOR_WHITE, font=font_label)
-            draw.text((kx + 12, ky - 6), "カンボジア", fill=COLOR_WHITE, font=font_label)
+                        draw.text((km_x + dx, km_y + dy), km_name, fill=COLOR_WHITE, font=font_city_label_km)
+                draw.text((km_x, km_y), km_name, fill=(255, 80, 80), font=font_city_label_km)
 
             # 破線
             draw_dashed_line(draw, (cx_p, cy_p), (jx, jy), (200, 200, 200), width=1)
@@ -1389,30 +1425,23 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
             draw.text((40, 110), dist_text_jp, fill=(140, 160, 180), font=font_dist)
             draw.text((40, 135), dist_text_kh, fill=(140, 160, 180), font=font_dist)
 
-            final_frame = img_p.copy()
+        # 地球下端の余白を半分にクロップ
+        globe_bottom = globe_y + GLOBE_SIZE
+        bottom_margin = IMG_H - globe_bottom
+        crop_h = globe_bottom + bottom_margin // 2
+        img = img.crop((0, 0, IMG_W, crop_h))
 
-        # パレット変換（赤の色化け防止: キーカラーを含む参照パレット使用）
-        # 重要な色を含む参照画像からパレットを生成
-        ref = Image.new("RGB", (20, 1))
-        ref_pixels = ref.load()
-        key_colors = [
-            COLOR_CITY, (188, 0, 45), (224, 0, 37), (3, 46, 161),  # 赤系+青
-            COLOR_WHITE, COLOR_BG, COLOR_OCEAN_RING, COLOR_TEXT,
-            (0, 82, 165), (100, 160, 210), (140, 160, 180),
-            (180, 180, 180), (255, 120, 120), (200, 200, 200),
-            (100, 100, 100), (230, 220, 180), (160, 180, 200),
-            (150, 170, 200), (120, 120, 120), (0, 0, 0),
-        ]
-        for ci, kc in enumerate(key_colors):
-            ref_pixels[ci, 0] = kc
-        # 画像と参照を結合してパレット生成
-        combined = Image.new("RGB", (img.width, img.height + 1))
-        combined.paste(img, (0, 0))
-        combined.paste(ref.resize((img.width, 1)), (0, img.height))
-        img_p = combined.quantize(colors=256, dither=0)
-        # 結合部分を切り取り
-        img_p = img_p.crop((0, 0, img.width, img.height))
-        img_frames.append(img_p)
+        # 縮小はRGB状態で行う（フォントのスムーズさを保つ）
+        if scale < 100:
+            new_w = int(IMG_W * scale / 100)
+            new_h = int(crop_h * scale / 100)
+            img = img.resize((new_w, new_h), Image.LANCZOS)
+
+        # RGBフレームを保持（パレット変換は全フレーム揃ってから共通パレットで行う）
+        img_frames_rgb.append(img)
+
+        if is_stopped:
+            final_frame = img.copy()
 
         # フレームごとのduration計算
         if is_moving:
@@ -1424,19 +1453,39 @@ def generate_gif(city_name, output_dir=".", frames=36, duration=42, direction=No
             # 停止フレーム: 5秒
             frame_durations.append(5000)
 
-    # 縮小
     if scale < 100:
-        new_w = int(IMG_W * scale / 100)
-        new_h = int(IMG_H * scale / 100)
-        resized = []
-        for f in img_frames:
-            rf = f.resize((new_w, new_h), Image.LANCZOS)
-            resized.append(rf.quantize(colors=256, dither=0))
-        img_frames = resized
-        print("リサイズ: {}x{} ({}%)".format(new_w, new_h, scale))
+        print("リサイズ: {}x{} ({}%)".format(
+            int(IMG_W * scale / 100), int(crop_h * scale / 100), scale))
+
+    # 共通パレットで全フレームを変換（回転中も停止時も同じ色を保証）
+    # 停止フレーム（最後）を基準に全フレームを結合してパレット生成
+    key_colors = [
+        COLOR_CITY, (188, 0, 45), (224, 0, 37), (3, 46, 161),
+        COLOR_WHITE, COLOR_BG, COLOR_OCEAN_RING, COLOR_TEXT,
+        (0, 82, 165), (100, 160, 210), (140, 160, 180),
+        (180, 180, 180), (255, 120, 120), (200, 200, 200),
+        (100, 100, 100), (230, 220, 180), (160, 180, 200),
+        (150, 170, 200), (120, 120, 120), (0, 0, 0),
+    ]
+    ref = Image.new("RGB", (len(key_colors), 1))
+    ref_pixels = ref.load()
+    for ci, kc in enumerate(key_colors):
+        ref_pixels[ci, 0] = kc
+    # 停止フレーム + キーカラーからパレット生成
+    last_rgb = img_frames_rgb[-1]
+    palette_src = Image.new("RGB", (last_rgb.width, last_rgb.height + 1))
+    palette_src.paste(last_rgb, (0, 0))
+    palette_src.paste(ref.resize((last_rgb.width, 1)), (0, last_rgb.height))
+    palette_img = palette_src.quantize(colors=256, dither=0)
+    # 共通パレットを全フレームに適用
+    img_frames = []
+    for f_rgb in img_frames_rgb:
+        img_frames.append(f_rgb.quantize(palette=palette_img, dither=0))
 
     # GIF保存
-    output_path = Path(output_dir) / "map_{}_{}.gif".format(city_name, direction)
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = Path(output_dir) / "map_{}_{}_{}.gif".format(city_name, timestamp, scale)
     img_frames[0].save(
         str(output_path),
         save_all=True,
@@ -1491,7 +1540,7 @@ if __name__ == "__main__":
         "top-right-to-center", "top-left-to-center",
         "bottom-right-to-center", "bottom-left-to-center",
     ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
-    parser.add_argument("--gif-scale", type=int, choices=[80, 50], default=100, help="GIF解像度縮小（80=20%%縮小, 50=50%%縮小）")
+    parser.add_argument("--gif-scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=60, help="GIF解像度縮小（50～90）")
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
