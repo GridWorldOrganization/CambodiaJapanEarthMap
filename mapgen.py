@@ -1547,8 +1547,7 @@ if __name__ == "__main__":
         "top-right-to-center", "top-left-to-center",
         "bottom-right-to-center", "bottom-left-to-center",
     ], default=None, help="GIF: 移動方向を指定（未指定=ランダム）")
-    parser.add_argument("--gif-scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=60, help="GIF解像度縮小（50～90）")
-    parser.add_argument("--png-scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=100, help="PNG解像度縮小（デフォルト100）")
+    parser.add_argument("--scale", type=int, choices=[50, 60, 70, 80, 90, 100], default=None, help="解像度スケール（デフォルト: GIF=60, PNG=100）")
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -1559,9 +1558,11 @@ if __name__ == "__main__":
         print(city)
 
     if args.gif:
-        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=args.gif_scale, force_moon=args.force_moon, force_ufo=args.force_ufo)
+        scale = args.scale if args.scale is not None else 60
+        path = generate_gif(city, args.output, frames=args.gif_frames, duration=args.gif_duration, direction=args.force_direction, scale=scale, force_moon=args.force_moon, force_ufo=args.force_ufo)
     else:
-        path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add, scale=args.png_scale)
+        scale = args.scale if args.scale is not None else 100
+        path = generate_map(city, args.output, force_moon=args.force_moon, force_ufo=args.force_ufo, force_city_auto_add=args.force_city_auto_add, scale=scale)
 
     if path and args.upload:
         upload_to_chatwork(path, args.upload, args.message)
