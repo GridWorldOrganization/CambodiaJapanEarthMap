@@ -1,0 +1,21 @@
+[DEBUG] BAT起動 
+[DEBUG] BAT_DIR=C:\sync_c\claude_code_akasaka2\mapapp\CambodiaJapanEarthMap\bat\ 
+[DEBUG] WORK_DIR=C:\sync_c\claude_code_akasaka2\mapapp 
+[DEBUG] LOGFILE=C:\sync_c\claude_code_akasaka2\mapapp\CambodiaJapanEarthMap\bat\SetTaskSchedule.log 
+[DEBUG] ENVFILE=C:\sync_c\claude_code_akasaka2\mapapp\CambodiaJapanEarthMap\bat\SetTaskSchedule_config.env 
+[DEBUG] config.env 存在あり 
+[DEBUG] STEP: env読み込み完了 
+[DEBUG] PROCEDURE_FILE=20260323_2055_AI手順書_世界の都市をXに投稿.md 
+[DEBUG] MODE=dev 
+[DEBUG] CLAUDE_CODE_EXEC_DIR=C:\sync_c\claude_code_akasaka2\mapapp 
+[DEBUG] 実行ディレクトリ(決定)=C:\sync_c\claude_code_akasaka2\mapapp 
+[DEBUG] STEP: モード判定 
+[DEBUG] MODE(決定)=dev 
+[DEBUG] STEP: PROCEDURE_FILEチェック 
+[DEBUG] STEP: cd前 
+[ClaudeMapApp] 開始: 2026/03/23 22:32:07.20 
+[ClaudeMapApp] モード: dev 
+[ClaudeMapApp] 手順書: 20260323_2055_AI手順書_世界の都市をXに投稿.md 
+[ClaudeMapApp] 実行ディレクトリ: C:\sync_c\claude_code_akasaka2\mapapp 
+[DEBUG] STEP: cd完了 
+[ClaudeMapApp] Claude実行中... 
